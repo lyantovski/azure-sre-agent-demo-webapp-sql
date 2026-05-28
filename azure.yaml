@@ -1,0 +1,38 @@
+name: sre-agent-demo
+metadata:
+  template: sre-agent-demo@0.0.1
+
+services:
+  web:
+    project: .
+    language: ts
+    host: appservice
+
+hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: |
+        # Get current user information for SQL admin
+        USER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv)
+        USER_NAME=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+        azd env set AZURE_PRINCIPAL_ID $USER_OBJECT_ID
+        azd env set AZURE_PRINCIPAL_NAME $USER_NAME
+    windows:
+      shell: pwsh
+      run: |
+        # Get current user information for SQL admin
+        $USER_OBJECT_ID = az ad signed-in-user show --query id -o tsv
+        $USER_NAME = az ad signed-in-user show --query userPrincipalName -o tsv
+        azd env set AZURE_PRINCIPAL_ID $USER_OBJECT_ID
+        azd env set AZURE_PRINCIPAL_NAME $USER_NAME
+  
+  postprovision:
+    posix:
+      shell: sh
+      run: ./scripts/postprovision.sh
+      continueOnError: false
+    windows:
+      shell: pwsh
+      run: ./scripts/postprovision.ps1
+      continueOnError: false
