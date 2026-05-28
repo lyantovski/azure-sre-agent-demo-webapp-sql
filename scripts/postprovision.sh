@@ -58,36 +58,22 @@ SQL_SCRIPT="${SQL_SCRIPT//\{\{WEBAPP_NAME\}\}/$WEBAPP_NAME}"
 # Get an Azure AD access token for Azure SQL
 ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv)
 
-# INTENTIONAL FAILURE SCENARIO FOR SRE AGENT TESTING
-# Database user creation is DISABLED - the app will fail with login errors
+echo "Executing SQL script to create contained database user..."
+sqlcmd \
+  -S "$SQL_SERVER.database.windows.net" \
+  -d "$SQL_DATABASE" \
+  -G \
+  --authentication-method=ActiveDirectoryDefault \
+  -Q "$SQL_SCRIPT"
 echo ""
 echo "=========================================="
-echo "[SRE-TEST] Database user creation SKIPPED"
+echo "SQL Database User created successfully!"
 echo "=========================================="
-echo "This simulates a missing database user scenario."
-echo "When the app tries to connect, it will fail with:"
-echo "  'Login failed for user [webapp-identity]'"
-echo "=========================================="
-echo ""
 
-# Database user creation is commented out below for testing:
-if false; then  # Disabled for SRE testing
-  sqlcmd \
-    -S "$SQL_SERVER.database.windows.net" \
-    -d "$SQL_DATABASE" \
-    -G \
-    --authentication-method=ActiveDirectoryDefault \
-    -Q "$SQL_SCRIPT"
-  echo ""
-  echo "=========================================="
-  echo "SQL Database User created successfully!"
-  echo "=========================================="
-
-  # Clean up temporary firewall rule
-  echo "Removing temporary firewall rule..."
-  az sql server firewall-rule delete \
-    --resource-group "$RESOURCE_GROUP" \
-    --server "$SQL_SERVER" \
-    --name "PostProvisionTemp" \
-    --output none 2>/dev/null || true
-fi
+# Clean up temporary firewall rule
+echo "Removing temporary firewall rule..."
+az sql server firewall-rule delete \
+  --resource-group "$RESOURCE_GROUP" \
+  --server "$SQL_SERVER" \
+  --name "PostProvisionTemp" \
+  --output none 2>/dev/null || true
