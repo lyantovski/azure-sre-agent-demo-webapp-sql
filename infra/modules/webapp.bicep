@@ -60,7 +60,7 @@ resource webApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'SQL_DATABASE'
-          value: '${sqlDatabaseName}-misconfigured'
+          value: sqlDatabaseName
         }
         {
           name: 'WEBSITE_NODE_DEFAULT_VERSION'

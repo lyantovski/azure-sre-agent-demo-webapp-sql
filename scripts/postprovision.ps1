@@ -67,20 +67,6 @@ $SQL_SCRIPT = (Get-Content "$SCRIPT_DIR/create-db-user.sql" -Raw).Replace('{{WEB
 # Get an Azure AD access token for Azure SQL
 $ACCESS_TOKEN = (az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv)
 
-# INTENTIONAL FAILURE SCENARIO FOR SRE AGENT TESTING
-# Database user creation is DISABLED - the app will fail with login errors
-Write-Host ""
-Write-Host "=========================================="
-Write-Host "[SRE-TEST] Database user creation SKIPPED"
-Write-Host "=========================================="
-Write-Host "This simulates a missing database user scenario."
-Write-Host "When the app tries to connect, it will fail with:"
-Write-Host "  'Login failed for user [webapp-identity]'"
-Write-Host "=========================================="
-Write-Host ""
-
-# Database user creation is commented out below for testing:
-<# Disabled for SRE testing:
 try {
     Invoke-Sqlcmd `
       -ServerInstance "$SQL_SERVER.database.windows.net" `
@@ -92,14 +78,6 @@ try {
     Write-Host "=========================================="
     Write-Host "SQL Database User created successfully!"
     Write-Host "=========================================="
-
-    # Clean up temporary firewall rule
-    Write-Host "Removing temporary firewall rule..."
-    az sql server firewall-rule delete `
-      --resource-group $RESOURCE_GROUP `
-      --server $SQL_SERVER `
-      --name "PostProvisionTemp" `
-      --output none 2>$null
 } catch {
     Write-Host ""
     Write-Host "=========================================="
@@ -117,5 +95,11 @@ try {
     Write-Host "  .\scripts\postprovision.ps1"
     Write-Host ""
     exit 1
+} finally {
+    Write-Host "Removing temporary firewall rule..."
+    az sql server firewall-rule delete `
+      --resource-group $RESOURCE_GROUP `
+      --server $SQL_SERVER `
+      --name "PostProvisionTemp" `
+      --output none 2>$null
 }
-  #>
