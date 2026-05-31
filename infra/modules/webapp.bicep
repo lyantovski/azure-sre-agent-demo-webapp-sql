@@ -16,12 +16,8 @@ param sqlServerFqdn string
 @description('SQL Database name')
 param sqlDatabaseName string
 
-@description('Existing Application Insights resource ID')
-param appInsightsResourceId string
-
 var appServicePlanName = 'asp-${environmentName}-${uniqueSuffix}'
 var webAppName = 'app-${environmentName}-${uniqueSuffix}'
-var appInsights = reference(appInsightsResourceId, '2020-02-02')
 
 // App Service Plan (Linux)
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
@@ -45,7 +41,6 @@ resource webApp 'Microsoft.Web/sites@2023-01-01' = {
   kind: 'app,linux'
   tags: {
     'azd-service-name': 'web'
-    'hidden-link:${appInsightsResourceId}': 'Resource'
   }
   identity: {
     type: 'SystemAssigned'
@@ -74,14 +69,6 @@ resource webApp 'Microsoft.Web/sites@2023-01-01' = {
         {
           name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
           value: 'true'
-        }
-        {
-          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appInsights.ConnectionString
-        }
-        {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: appInsights.InstrumentationKey
         }
       ]
     }
