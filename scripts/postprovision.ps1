@@ -78,6 +78,14 @@ try {
     Write-Host "=========================================="
     Write-Host "SQL Database User created successfully!"
     Write-Host "=========================================="
+
+    # Clean up temporary firewall rule
+    Write-Host "Removing temporary firewall rule..."
+    az sql server firewall-rule delete `
+      --resource-group $RESOURCE_GROUP `
+      --server $SQL_SERVER `
+      --name "PostProvisionTemp" `
+      --output none 2>$null
 } catch {
     Write-Host ""
     Write-Host "=========================================="
@@ -95,11 +103,4 @@ try {
     Write-Host "  .\scripts\postprovision.ps1"
     Write-Host ""
     exit 1
-} finally {
-    Write-Host "Removing temporary firewall rule..."
-    az sql server firewall-rule delete `
-      --resource-group $RESOURCE_GROUP `
-      --server $SQL_SERVER `
-      --name "PostProvisionTemp" `
-      --output none 2>$null
 }
