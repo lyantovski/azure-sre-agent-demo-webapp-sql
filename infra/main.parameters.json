@@ -13,6 +13,9 @@
     },
     "currentUserName": {
       "value": "${AZURE_PRINCIPAL_NAME}"
+    },
+    "appInsightsResourceId": {
+      "value": "/subscriptions/a303e0dc-f916-4c4a-8af1-e40f6163e1bb/resourceGroups/ly-swedencentral-rg/providers/Microsoft.Insights/components/sre-agent-demo1-8a251be2-9409-app-insights"
     }
   }
 }

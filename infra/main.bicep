@@ -15,6 +15,9 @@ param currentUserObjectId string
 @description('Current user principal name for SQL admin')
 param currentUserName string
 
+@description('Existing Application Insights resource ID for App Service monitoring')
+param appInsightsResourceId string
+
 // VNet Module
 module vnet 'modules/vnet.bicep' = {
   name: 'vnet-deployment'
@@ -60,6 +63,7 @@ module webapp 'modules/webapp.bicep' = {
     vnetSubnetId: vnet.outputs.appSubnetId
     sqlServerFqdn: sql.outputs.sqlServerFqdn
     sqlDatabaseName: sql.outputs.sqlDatabaseName
+    appInsightsResourceId: appInsightsResourceId
   }
 }
 

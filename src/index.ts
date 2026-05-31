@@ -1,3 +1,4 @@
+import './telemetry';
 import express, { Request, Response } from 'express';
 import sql from 'mssql';
 import { DefaultAzureCredential } from '@azure/identity';

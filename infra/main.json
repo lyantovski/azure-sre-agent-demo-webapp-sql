@@ -1,0 +1,607 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.177.2456",
+      "templateHash": "10679165574911107121"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "metadata": {
+        "description": "Primary location for all resources"
+      }
+    },
+    "environmentName": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Environment name (e.g., dev, test, prod)"
+      }
+    },
+    "uniqueSuffix": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Unique suffix for resource names"
+      }
+    },
+    "currentUserObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Current user object ID for SQL admin"
+      }
+    },
+    "currentUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "Current user principal name for SQL admin"
+      }
+    },
+    "appInsightsResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing Application Insights resource ID for App Service monitoring"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vnet-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "uniqueSuffix": {
+            "value": "[parameters('uniqueSuffix')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.177.2456",
+              "templateHash": "9507236011560514951"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for all resources"
+              }
+            },
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name"
+              }
+            },
+            "uniqueSuffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Unique suffix for resource names"
+              }
+            }
+          },
+          "variables": {
+            "vnetName": "[format('vnet-{0}-{1}', parameters('environmentName'), parameters('uniqueSuffix'))]",
+            "appSubnetName": "snet-app",
+            "privateEndpointSubnetName": "snet-privateendpoint"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-04-01",
+              "name": "[variables('vnetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.0.0.0/16"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[variables('appSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "10.0.1.0/24",
+                      "delegations": [
+                        {
+                          "name": "delegation",
+                          "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms"
+                          }
+                        }
+                      ],
+                      "privateEndpointNetworkPolicies": "Disabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  },
+                  {
+                    "name": "[variables('privateEndpointSubnetName')]",
+                    "properties": {
+                      "addressPrefix": "10.0.2.0/24",
+                      "privateEndpointNetworkPolicies": "Disabled",
+                      "privateLinkServiceNetworkPolicies": "Enabled"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+            },
+            "vnetName": {
+              "type": "string",
+              "value": "[variables('vnetName')]"
+            },
+            "appSubnetId": {
+              "type": "string",
+              "value": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), variables('appSubnetName'))]"
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "value": "[format('{0}/subnets/{1}', resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), variables('privateEndpointSubnetName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sql-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "uniqueSuffix": {
+            "value": "[parameters('uniqueSuffix')]"
+          },
+          "adminObjectId": {
+            "value": "[parameters('currentUserObjectId')]"
+          },
+          "adminLoginName": {
+            "value": "[parameters('currentUserName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.177.2456",
+              "templateHash": "7449217397763821869"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for all resources"
+              }
+            },
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name"
+              }
+            },
+            "uniqueSuffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Unique suffix for resource names"
+              }
+            },
+            "adminObjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AD admin object ID"
+              }
+            },
+            "adminLoginName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AD admin login name"
+              }
+            }
+          },
+          "variables": {
+            "sqlServerName": "[format('sql-{0}-{1}', parameters('environmentName'), parameters('uniqueSuffix'))]",
+            "sqlDatabaseName": "[format('sqldb-{0}', parameters('environmentName'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-05-01-preview",
+              "name": "[variables('sqlServerName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "version": "12.0",
+                "minimalTlsVersion": "1.2",
+                "publicNetworkAccess": "Enabled",
+                "administrators": {
+                  "administratorType": "ActiveDirectory",
+                  "principalType": "User",
+                  "login": "[parameters('adminLoginName')]",
+                  "sid": "[parameters('adminObjectId')]",
+                  "tenantId": "[subscription().tenantId]",
+                  "azureADOnlyAuthentication": true
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-05-01-preview",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), 'AllowAzureServices')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-05-01-preview",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), variables('sqlDatabaseName'))]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+              },
+              "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "maxSizeBytes": 2147483648
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "sqlServerId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+            },
+            "sqlServerName": {
+              "type": "string",
+              "value": "[variables('sqlServerName')]"
+            },
+            "sqlServerFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-05-01-preview').fullyQualifiedDomainName]"
+            },
+            "sqlDatabaseName": {
+              "type": "string",
+              "value": "[variables('sqlDatabaseName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "webapp-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environmentName": {
+            "value": "[parameters('environmentName')]"
+          },
+          "uniqueSuffix": {
+            "value": "[parameters('uniqueSuffix')]"
+          },
+          "vnetSubnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vnet-deployment'), '2022-09-01').outputs.appSubnetId.value]"
+          },
+          "sqlServerFqdn": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlServerFqdn.value]"
+          },
+          "sqlDatabaseName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlDatabaseName.value]"
+          },
+          "appInsightsResourceId": {
+            "value": "[parameters('appInsightsResourceId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.177.2456",
+              "templateHash": "13554335965610240126"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for all resources"
+              }
+            },
+            "environmentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment name"
+              }
+            },
+            "uniqueSuffix": {
+              "type": "string",
+              "metadata": {
+                "description": "Unique suffix for resource names"
+              }
+            },
+            "vnetSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet subnet ID for VNet integration"
+              }
+            },
+            "sqlServerFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "SQL Server FQDN"
+              }
+            },
+            "sqlDatabaseName": {
+              "type": "string",
+              "metadata": {
+                "description": "SQL Database name"
+              }
+            },
+            "appInsightsResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Existing Application Insights resource ID"
+              }
+            }
+          },
+          "variables": {
+            "appServicePlanName": "[format('asp-{0}-{1}', parameters('environmentName'), parameters('uniqueSuffix'))]",
+            "webAppName": "[format('app-{0}-{1}', parameters('environmentName'), parameters('uniqueSuffix'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-01-01",
+              "name": "[variables('appServicePlanName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "P1v3",
+                "tier": "PremiumV3",
+                "capacity": 1
+              },
+              "kind": "linux",
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-01-01",
+              "name": "[variables('webAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "app,linux",
+              "tags": {
+                "azd-service-name": "web",
+                "[format('hidden-link:{0}', parameters('appInsightsResourceId'))]": "Resource"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|20-lts",
+                  "alwaysOn": true,
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "appSettings": [
+                    {
+                      "name": "SQL_SERVER",
+                      "value": "[parameters('sqlServerFqdn')]"
+                    },
+                    {
+                      "name": "SQL_DATABASE",
+                      "value": "[format('{0}-misconfigured', parameters('sqlDatabaseName'))]"
+                    },
+                    {
+                      "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                      "value": "~20"
+                    },
+                    {
+                      "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                      "value": "true"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[reference(parameters('appInsightsResourceId'), '2020-02-02').ConnectionString]"
+                    },
+                    {
+                      "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                      "value": "[reference(parameters('appInsightsResourceId'), '2020-02-02').InstrumentationKey]"
+                    }
+                  ]
+                },
+                "virtualNetworkSubnetId": "[parameters('vnetSubnetId')]",
+                "vnetRouteAllEnabled": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "webAppId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+            },
+            "webAppName": {
+              "type": "string",
+              "value": "[variables('webAppName')]"
+            },
+            "webAppUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2023-01-01').defaultHostName)]"
+            },
+            "webAppPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2023-01-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sql-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vnet-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sql-role-assignment-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "sqlServerId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlServerId.value]"
+          },
+          "sqlServerName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlServerName.value]"
+          },
+          "webAppPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webapp-deployment'), '2022-09-01').outputs.webAppPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.177.2456",
+              "templateHash": "11403318148919874119"
+            }
+          },
+          "parameters": {
+            "sqlServerId": {
+              "type": "string",
+              "metadata": {
+                "description": "SQL Server resource ID"
+              }
+            },
+            "webAppPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Web App managed identity principal ID"
+              }
+            },
+            "sqlServerName": {
+              "type": "string",
+              "metadata": {
+                "description": "SQL Server name"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Sql/servers/{0}', parameters('sqlServerName'))]",
+              "name": "[guid(parameters('sqlServerId'), parameters('webAppPrincipalId'), 'SqlDbContributor')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '9b7fa17d-e63e-47b0-bb0a-15c516ac86ec')]",
+                "principalId": "[parameters('webAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ],
+          "outputs": {
+            "roleAssignmentId": {
+              "type": "string",
+              "value": "[extensionResourceId(resourceId('Microsoft.Sql/servers', parameters('sqlServerName')), 'Microsoft.Authorization/roleAssignments', guid(parameters('sqlServerId'), parameters('webAppPrincipalId'), 'SqlDbContributor'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sql-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'webapp-deployment')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "webAppUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webapp-deployment'), '2022-09-01').outputs.webAppUrl.value]"
+    },
+    "webAppName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webapp-deployment'), '2022-09-01').outputs.webAppName.value]"
+    },
+    "sqlServerName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlServerName.value]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlServerFqdn.value]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sql-deployment'), '2022-09-01').outputs.sqlDatabaseName.value]"
+    },
+    "webAppPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'webapp-deployment'), '2022-09-01').outputs.webAppPrincipalId.value]"
+    }
+  }
+}
