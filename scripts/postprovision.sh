@@ -55,25 +55,38 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SQL_SCRIPT=$(cat "$SCRIPT_DIR/create-db-user.sql")
 SQL_SCRIPT="${SQL_SCRIPT//\{\{WEBAPP_NAME\}\}/$WEBAPP_NAME}"
 
-# Get an Azure AD access token for Azure SQL
-ACCESS_TOKEN=$(az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv)
+cleanup() {
+  echo "Removing temporary firewall rule..."
+  az sql server firewall-rule delete \
+    --resource-group "$RESOURCE_GROUP" \
+    --server "$SQL_SERVER" \
+    --name "PostProvisionTemp" \
+    --output none 2>/dev/null || true
+}
+trap cleanup EXIT
 
-echo "Executing SQL script to create contained database user..."
-sqlcmd \
+if sqlcmd \
   -S "$SQL_SERVER.database.windows.net" \
   -d "$SQL_DATABASE" \
   -G \
   --authentication-method=ActiveDirectoryDefault \
-  -Q "$SQL_SCRIPT"
-echo ""
-echo "=========================================="
-echo "SQL Database User created successfully!"
-echo "=========================================="
-
-# Clean up temporary firewall rule
-echo "Removing temporary firewall rule..."
-az sql server firewall-rule delete \
-  --resource-group "$RESOURCE_GROUP" \
-  --server "$SQL_SERVER" \
-  --name "PostProvisionTemp" \
-  --output none 2>/dev/null || true
+  -Q "$SQL_SCRIPT"; then
+  echo ""
+  echo "=========================================="
+  echo "SQL Database User created successfully!"
+  echo "=========================================="
+else
+  echo ""
+  echo "=========================================="
+  echo "ERROR: Failed to create SQL database user"
+  echo "=========================================="
+  echo "This could be due to:"
+  echo "  1. Insufficient permissions (you must be a SQL Entra admin)"
+  echo "  2. Network connectivity issues"
+  echo "  3. The database or server does not exist yet"
+  echo ""
+  echo "You can manually create the database user later by rerunning:"
+  echo "  ./scripts/postprovision.sh"
+  echo ""
+  exit 1
+fi

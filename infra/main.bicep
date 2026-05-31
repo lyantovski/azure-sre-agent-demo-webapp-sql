@@ -37,10 +37,7 @@ module sql 'modules/sql.bicep' = {
   }
 }
 
-// INTENTIONAL FAILURE: Private Endpoint Module DISABLED for SRE agent testing
-// Without the private endpoint, the app won't be able to reach the SQL Server through the private network.
-// This will cause connection timeouts or connectivity errors.
-/*
+// Private Endpoint Module
 module privateEndpoint 'modules/privateEndpoint.bicep' = {
   name: 'private-endpoint-deployment'
   params: {
@@ -52,7 +49,6 @@ module privateEndpoint 'modules/privateEndpoint.bicep' = {
     privateEndpointSubnetId: vnet.outputs.privateEndpointSubnetId
   }
 }
-*/
 
 // Web App Module
 module webapp 'modules/webapp.bicep' = {
