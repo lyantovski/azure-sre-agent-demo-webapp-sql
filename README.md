@@ -27,6 +27,7 @@ This application demonstrates:
 ```bash
 # Login to Azure
 az login
+
 azd auth login
 
 # Initialize the environment (first time only)
@@ -160,6 +161,18 @@ If the postprovision hook fails or you need to manually create the database user
    ```
 
 3. Verify database user exists (see Manual Database User Creation above)
+
+### "Failed to resolve the signed-in Azure CLI identity" Error
+
+**Symptom**: `azd up` fails in the preprovision hook before infrastructure deployment starts
+
+**Cause**: The current Azure CLI login is stale or incomplete, so the hook cannot resolve your object ID and UPN for SQL Entra admin setup.
+
+**Resolution**:
+```bash
+az login
+azd up
+```
 
 ### Private Endpoint Connectivity Issues
 

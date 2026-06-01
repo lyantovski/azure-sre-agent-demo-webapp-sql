@@ -14,16 +14,61 @@ hooks:
       shell: sh
       run: |
         # Get current user information for SQL admin
-        USER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv)
-        USER_NAME=$(az ad signed-in-user show --query userPrincipalName -o tsv)
+        ACCESS_TOKEN=$(az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv 2>/dev/null)
+
+        if [ -z "$ACCESS_TOKEN" ]; then
+          echo "Failed to read the current Azure CLI access token. Run 'az login' before running 'azd up'." >&2
+          exit 1
+        fi
+
+        PAYLOAD=$(printf '%s' "$ACCESS_TOKEN" | cut -d '.' -f 2 | tr '_-' '/+')
+        PADDING=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
+        while [ "$PADDING" -gt 0 ]; do
+          PAYLOAD="${PAYLOAD}="
+          PADDING=$((PADDING - 1))
+        done
+
+        CLAIMS=$(printf '%s' "$PAYLOAD" | base64 --decode 2>/dev/null || printf '%s' "$PAYLOAD" | base64 -d 2>/dev/null)
+        USER_OBJECT_ID=$(printf '%s' "$CLAIMS" | sed -n 's/.*"oid"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        USER_NAME=$(printf '%s' "$CLAIMS" | sed -n 's/.*"preferred_username"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+        if [ -z "$USER_NAME" ]; then
+          USER_NAME=$(printf '%s' "$CLAIMS" | sed -n 's/.*"upn"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        fi
+
+        if [ -z "$USER_OBJECT_ID" ] || [ -z "$USER_NAME" ]; then
+          echo "Failed to resolve the signed-in Azure CLI identity from the current access token. Run 'az login' before running 'azd up'." >&2
+          exit 1
+        fi
+
         azd env set AZURE_PRINCIPAL_ID $USER_OBJECT_ID
         azd env set AZURE_PRINCIPAL_NAME $USER_NAME
     windows:
       shell: pwsh
       run: |
         # Get current user information for SQL admin
-        $USER_OBJECT_ID = az ad signed-in-user show --query id -o tsv
-        $USER_NAME = az ad signed-in-user show --query userPrincipalName -o tsv
+        $ACCESS_TOKEN = az account get-access-token --resource https://management.azure.com/ --query accessToken -o tsv 2>$null
+
+        if ([string]::IsNullOrWhiteSpace($ACCESS_TOKEN)) {
+          Write-Error "Failed to read the current Azure CLI access token. Run 'az login' before running 'azd up'."
+          exit 1
+        }
+
+        $payload = $ACCESS_TOKEN.Split('.')[1].Replace('-', '+').Replace('_', '/')
+        switch ($payload.Length % 4) {
+          2 { $payload += '==' }
+          3 { $payload += '=' }
+        }
+
+        $claims = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json
+        $USER_OBJECT_ID = $claims.oid
+        $USER_NAME = if ([string]::IsNullOrWhiteSpace($claims.preferred_username)) { $claims.upn } else { $claims.preferred_username }
+
+        if ([string]::IsNullOrWhiteSpace($USER_OBJECT_ID) -or [string]::IsNullOrWhiteSpace($USER_NAME)) {
+          Write-Error "Failed to resolve the signed-in Azure CLI identity from the current access token. Run 'az login' before running 'azd up'."
+          exit 1
+        }
+
         azd env set AZURE_PRINCIPAL_ID $USER_OBJECT_ID
         azd env set AZURE_PRINCIPAL_NAME $USER_NAME
   
